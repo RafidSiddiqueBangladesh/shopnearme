@@ -185,7 +185,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('shopsync-language') as Language;
+      const stored = localStorage.getItem('shopnearme-language') as Language;
       return stored || 'en';
     }
     return 'en';
@@ -193,7 +193,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('shopsync-language', lang);
+    localStorage.setItem('shopnearme-language', lang);
   };
 
   const t = (key: string): string => {

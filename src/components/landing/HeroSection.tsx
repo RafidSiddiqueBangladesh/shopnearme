@@ -82,7 +82,7 @@ const HeroSection = () => {
                   <div className="w-3 h-3 rounded-full bg-destructive" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
                   <div className="w-3 h-3 rounded-full bg-primary" />
-                  <span className="ml-4 text-sm text-muted-foreground">ShopSync Dashboard</span>
+                  <span className="ml-4 text-sm text-muted-foreground">Shop Near Me Dashboard</span>
                 </div>
               </div>
 

@@ -26,7 +26,7 @@ const Login = () => {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">S</span>
               </div>
-              <span className="font-display font-bold text-xl">ShopSync</span>
+              <span className="font-display font-bold text-xl">Shop Near Me</span>
             </div>
             <h1 className="font-display text-3xl font-bold mb-2">Welcome back</h1>
             <p className="text-muted-foreground">Sign in to your account to continue</p>
@@ -157,7 +157,7 @@ const Login = () => {
           <div className="text-6xl font-bold font-display mb-4">10K+</div>
           <div className="text-xl text-background/80 mb-2">Shops Already Growing</div>
           <p className="text-background/60">
-            Join thousands of shopkeepers using ShopSync to digitize, track, and grow their businesses.
+            Join thousands of shopkeepers using Shop Near Me to digitize, track, and grow their businesses.
           </p>
           
           <div className="mt-8 grid grid-cols-3 gap-4 text-center">

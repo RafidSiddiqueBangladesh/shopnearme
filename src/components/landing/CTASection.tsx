@@ -20,7 +20,7 @@ const CTASection = () => {
               <span className="text-gradient-primary">Digitize Your Shop?</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of shopkeepers already growing with ShopSync. 
+              Join thousands of shopkeepers already growing with Shop Near Me. 
               Get started in minutes—works with any phone.
             </p>
 

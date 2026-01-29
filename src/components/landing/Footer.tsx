@@ -38,7 +38,7 @@ const Footer = () => {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">S</span>
               </div>
-              <span className="font-display font-bold text-xl">ShopSync</span>
+              <span className="font-display font-bold text-xl">Shop Near Me</span>
             </div>
             <p className="text-background/70 mb-6 max-w-xs">
               Digitizing every small shop. Empowering communities with IoT and AI.
@@ -46,7 +46,7 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-background/70">
                 <Mail className="w-4 h-4" />
-                hello@shopsync.io
+                hello@shopnearme.io
               </div>
               <div className="flex items-center gap-3 text-sm text-background/70">
                 <Phone className="w-4 h-4" />
@@ -116,7 +116,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-background/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-background/60">
-            © 2024 ShopSync. All rights reserved.
+            © 2024 Shop Near Me. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
             <a href="#" className="w-10 h-10 rounded-lg bg-background/10 flex items-center justify-center hover:bg-background/20 transition-colors">

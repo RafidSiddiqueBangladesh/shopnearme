@@ -24,7 +24,7 @@ const Navbar = () => {
               <span className="text-primary-foreground font-bold text-lg">S</span>
             </div>
             <span className="font-display font-bold text-xl text-foreground">
-              ShopSync
+              Shop Near Me
             </span>
           </Link>
 

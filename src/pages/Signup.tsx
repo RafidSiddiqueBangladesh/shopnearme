@@ -51,7 +51,7 @@ const Signup = () => {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">S</span>
               </div>
-              <span className="font-display font-bold text-xl">ShopSync</span>
+              <span className="font-display font-bold text-xl">Shop Near Me</span>
             </div>
             <h1 className="font-display text-3xl font-bold mb-2">Create your account</h1>
             <p className="text-muted-foreground">Start digitizing your shop in minutes</p>
@@ -242,7 +242,7 @@ const Signup = () => {
         <div className="relative z-10 max-w-md text-center">
           <div className="text-4xl font-bold font-display mb-4">Join the Revolution</div>
           <p className="text-lg text-background/80 mb-8">
-            ShopSync is digitizing small shops across Bangladesh. Be part of the change.
+            Shop Near Me is digitizing small shops across Bangladesh. Be part of the change.
           </p>
           
           <div className="space-y-4 text-left">

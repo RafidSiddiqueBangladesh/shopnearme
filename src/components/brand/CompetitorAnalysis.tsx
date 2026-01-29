@@ -53,7 +53,7 @@ const CompetitorAnalysis = ({ competitors = mockCompetitors }: CompetitorAnalysi
             <div 
               className="bg-primary rounded-l-full" 
               style={{ width: `${ourMarketShare}%` }}
-              title={`ShopSync: ${ourMarketShare}%`}
+              title={`Shop Near Me: ${ourMarketShare}%`}
             />
             {competitors.map((c, idx) => (
               <div 
@@ -68,7 +68,7 @@ const CompetitorAnalysis = ({ competitors = mockCompetitors }: CompetitorAnalysi
           <div className="flex flex-wrap gap-3 mt-3 text-xs">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-primary" />
-              <span>ShopSync ({ourMarketShare}%)</span>
+              <span>Shop Near Me ({ourMarketShare}%)</span>
             </div>
             {competitors.slice(0, 3).map((c, idx) => (
               <div key={c.id} className="flex items-center gap-1">

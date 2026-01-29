@@ -69,25 +69,23 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-sm">S</span>
-                </div>
-                <span className="font-display font-bold text-lg">ShopSync</span>
-              </div>
-            </div>
+        <div className="flex items-center justify-between px-4 py-3 h-16">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
             <div className="flex items-center gap-2">
-              <SettingsDropdown />
-              <Button variant="outline" size="sm">
-                {t('common.login')}
-              </Button>
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">S</span>
+              </div>
+              <span className="font-display font-bold text-lg">Shop Near Me</span>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <SettingsDropdown />
+            <Button variant="outline" size="sm">
+              {t('common.login')}
+            </Button>
           </div>
         </div>
       </header>
