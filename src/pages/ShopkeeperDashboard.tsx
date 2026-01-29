@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -20,8 +20,10 @@ import {
   Users,
   Wifi,
   WifiOff,
-  CheckCircle
+  CheckCircle,
+  Activity
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
@@ -38,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const salesData = [
   { day: 'Sat', sales: 4500 },
@@ -84,6 +87,13 @@ const realtimeData = {
   lastUpdate: '2 mins ago',
 };
 
+// Glass Card Component
+const GlassCard = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`backdrop-blur-md bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl ${className}`}>
+    {children}
+  </div>
+);
+
 const ShopkeeperDashboard = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -94,6 +104,76 @@ const ShopkeeperDashboard = () => {
     quantity: number;
     supplier: string;
   }>({ open: false, product: '', quantity: 0, supplier: '' });
+  
+  // Realtime data states
+  const [apiStatus, setApiStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [isLoadingRealtime, setIsLoadingRealtime] = useState(false);
+  const [realtimeTotalSells, setRealtimeTotalSells] = useState(7250);
+  const [realtimeTotalBuys, setRealtimeTotalBuys] = useState(4500);
+  const [lastRealtimeUpdate, setLastRealtimeUpdate] = useState<Date | null>(null);
+  const API_BASE_URL = 'https://fastworking.onrender.com';
+
+  // Check API status on component mount
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/sells`, { 
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          setApiStatus('online');
+        } else {
+          setApiStatus('offline');
+        }
+      } catch (error) {
+        setApiStatus('offline');
+      }
+    };
+    checkApiStatus();
+  }, []);
+
+  const fetchRealtimeData = async () => {
+    setIsLoadingRealtime(true);
+    setApiStatus('checking');
+    try {
+      const [sellsRes, buysRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/sells`),
+        fetch(`${API_BASE_URL}/api/buys`)
+      ]);
+
+      if (sellsRes.ok && buysRes.ok) {
+        const sellsData = await sellsRes.json();
+        const buysData = await buysRes.json();
+        
+        setRealtimeTotalSells(sellsData.total_sells || 7250);
+        setRealtimeTotalBuys(buysData.total_buys || 4500);
+        setApiStatus('online');
+        setLastRealtimeUpdate(new Date());
+        
+        toast({
+          title: "Data Synced! ✓",
+          description: "Real-time data updated successfully from ESP32",
+        });
+      } else {
+        setApiStatus('offline');
+        toast({
+          title: "Sync Failed",
+          description: "Could not fetch real-time data. API server may be offline.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setApiStatus('offline');
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to ESP32 API server. Make sure it's running.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRealtime(false);
+    }
+  };
 
   const handleQuickOrder = (product: string, quantity: number, supplier: string) => {
     setOrderConfirmation({ open: true, product, quantity, supplier });
@@ -180,6 +260,16 @@ const ShopkeeperDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Tabs Section */}
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="realtime">Real-time Data</TabsTrigger>
+          </TabsList>
+
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="mt-4 space-y-6">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -487,6 +577,201 @@ const ShopkeeperDashboard = () => {
             </CardContent>
           </Card>
         </div>
+          </TabsContent>
+
+          {/* Realtime Data Tab */}
+          <TabsContent value="realtime" className="mt-4 space-y-6">
+            {/* Hero API Status Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <GlassCard className="p-6 relative overflow-hidden">
+                {/* Animated background gradient */}
+                <div className={`absolute inset-0 ${apiStatus === 'online' ? 'bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/10' : apiStatus === 'offline' ? 'bg-gradient-to-br from-red-500/5 via-transparent to-orange-500/10' : 'bg-gradient-to-br from-yellow-500/5 via-transparent to-amber-500/10'}`} />
+                
+                <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <motion.div 
+                      animate={apiStatus === 'checking' || isLoadingRealtime ? { rotate: 360 } : {}}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className={`p-4 rounded-2xl shadow-lg ${apiStatus === 'online' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : apiStatus === 'offline' ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-gradient-to-br from-yellow-500 to-amber-600'}`}
+                    >
+                      <Activity className="h-8 w-8 text-white" />
+                    </motion.div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground">IoT Backend Server</h3>
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {API_BASE_URL}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          variant="outline" 
+                          className={`${apiStatus === 'online' ? 'border-green-500 text-green-500 bg-green-500/10' : apiStatus === 'offline' ? 'border-red-500 text-red-500 bg-red-500/10' : 'border-yellow-500 text-yellow-500 bg-yellow-500/10'}`}
+                        >
+                          <span className={`w-2 h-2 rounded-full mr-2 ${apiStatus === 'online' ? 'bg-green-500' : apiStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'} ${(apiStatus === 'checking' || isLoadingRealtime) ? 'animate-pulse' : ''}`} />
+                          {apiStatus === 'online' ? 'Connected' : apiStatus === 'offline' ? 'Disconnected' : 'Connecting...'}
+                        </Badge>
+                        {isLoadingRealtime && (
+                          <Badge variant="secondary" className="animate-pulse">
+                            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                            Fetching (10-20s)...
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    {lastRealtimeUpdate && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Last sync: {lastRealtimeUpdate.toLocaleTimeString()}
+                      </div>
+                    )}
+                    <Button 
+                      onClick={fetchRealtimeData} 
+                      disabled={isLoadingRealtime}
+                      className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingRealtime ? 'animate-spin' : ''}`} />
+                      {isLoadingRealtime ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Loading Progress Bar */}
+                {isLoadingRealtime && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-4"
+                  >
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
+                      <Wifi className="h-4 w-4 animate-pulse" />
+                      <span>Fetching data from Render server (cold start may take 10-20 seconds)...</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-primary via-primary/80 to-primary"
+                        initial={{ x: "-100%" }}
+                        animate={{ x: "100%" }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        style={{ width: "50%" }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </GlassCard>
+            </motion.div>
+
+            {/* Live Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Total Sells Card */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <GlassCard className="p-6 relative overflow-hidden group hover:shadow-xl transition-shadow duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/10" />
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
+                  
+                  <div className="relative">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Today's Total Sells</p>
+                        <p className="text-xs text-green-600/70">Live from /api/sells</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                        <TrendingUp className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    
+                    {isLoadingRealtime ? (
+                      <div className="space-y-3">
+                        <div className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+                        <div className="flex gap-2">
+                          <div className="h-4 w-20 bg-muted/50 rounded animate-pulse" />
+                          <div className="h-4 w-16 bg-muted/50 rounded animate-pulse" />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <motion.p 
+                          key={realtimeTotalSells}
+                          initial={{ scale: 1.2, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="text-5xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent"
+                        >
+                          ৳{realtimeTotalSells.toLocaleString()}
+                        </motion.p>
+                        <div className="flex items-center gap-2 mt-3">
+                          <Badge variant="outline" className="border-green-500/50 text-green-600">
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                            Sales Revenue
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </GlassCard>
+              </motion.div>
+
+              {/* Total Buys Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <GlassCard className="p-6 relative overflow-hidden group hover:shadow-xl transition-shadow duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/10" />
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
+                  
+                  <div className="relative">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Today's Total Buys</p>
+                        <p className="text-xs text-blue-600/70">Live from /api/buys</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                        <TrendingDown className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    
+                    {isLoadingRealtime ? (
+                      <div className="space-y-3">
+                        <div className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+                        <div className="flex gap-2">
+                          <div className="h-4 w-20 bg-muted/50 rounded animate-pulse" />
+                          <div className="h-4 w-16 bg-muted/50 rounded animate-pulse" />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <motion.p 
+                          key={realtimeTotalBuys}
+                          initial={{ scale: 1.2, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent"
+                        >
+                          ৳{realtimeTotalBuys.toLocaleString()}
+                        </motion.p>
+                        <div className="flex items-center gap-2 mt-3">
+                          <Badge variant="outline" className="border-blue-500/50 text-blue-600">
+                            <TrendingDown className="h-3 w-3 mr-1" />
+                            Purchase Expense
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </GlassCard>
+              </motion.div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Order Confirmation Dialog */}
