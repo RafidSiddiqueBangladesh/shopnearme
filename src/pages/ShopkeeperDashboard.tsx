@@ -105,6 +105,13 @@ const ShopkeeperDashboard = () => {
     supplier: string;
   }>({ open: false, product: '', quantity: 0, supplier: '' });
   
+  // Transaction form states
+  const [transactionType, setTransactionType] = useState<'buy' | 'sell'>('sell');
+  const [paymentType, setPaymentType] = useState<'cash' | 'due'>('cash');
+  const [entityId, setEntityId] = useState('00');
+  const [amount, setAmount] = useState('');
+  const [isSendingTransaction, setIsSendingTransaction] = useState(false);
+  
   // Realtime data states
   const [apiStatus, setApiStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [isLoadingRealtime, setIsLoadingRealtime] = useState(false);
@@ -138,8 +145,24 @@ const ShopkeeperDashboard = () => {
     setApiStatus('checking');
     try {
       const [sellsRes, buysRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/sells`),
-        fetch(`${API_BASE_URL}/api/buys`)
+        fetch(`${API_BASE_URL}/api/sells`, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        }),
+        fetch(`${API_BASE_URL}/api/buys`, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        })
       ]);
 
       if (sellsRes.ok && buysRes.ok) {
@@ -153,26 +176,106 @@ const ShopkeeperDashboard = () => {
         
         toast({
           title: "Data Synced! ✓",
-          description: "Real-time data updated successfully from ESP32",
+          description: `Sales: ৳${sellsData.total_sells || 0} | Buys: ৳${buysData.total_buys || 0}`,
         });
       } else {
+        const errorSells = await sellsRes.text();
+        const errorBuys = await buysRes.text();
+        console.error('Sell response:', errorSells);
+        console.error('Buy response:', errorBuys);
+        
         setApiStatus('offline');
         toast({
           title: "Sync Failed",
-          description: "Could not fetch real-time data. API server may be offline.",
+          description: `Server response: ${sellsRes.status}`,
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Fetch error:', error);
       setApiStatus('offline');
       toast({
         title: "Connection Error",
-        description: "Unable to connect to ESP32 API server. Make sure it's running.",
+        description: `${error instanceof Error ? error.message : 'Unable to connect to API'}`,
         variant: "destructive",
       });
     } finally {
       setIsLoadingRealtime(false);
     }
+  };
+
+  // Function to send transaction data to API
+  const sendTransactionToAPI = async (transactionData: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
+        credentials: 'omit',
+        body: JSON.stringify({ data: transactionData })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Transaction Sent! ✓",
+          description: `Data: ${transactionData} recorded successfully`,
+        });
+        // Refresh data after sending
+        setTimeout(fetchRealtimeData, 1000);
+        return true;
+      } else {
+        const error = await response.text();
+        console.error('Transaction error:', error);
+        toast({
+          title: "Transaction Failed",
+          description: `Server response: ${response.status}`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Send transaction error:', error);
+      toast({
+        title: "Send Failed",
+        description: `${error instanceof Error ? error.message : 'Unable to send transaction'}`,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const handleSendTransaction = async () => {
+    if (!amount || isNaN(parseInt(amount))) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingTransaction(true);
+    
+    // Format: *1 for sell cash, #1 for buy cash, etc
+    // First char: * for sell, # for buy
+    // Second char: 1 for cash, 0 for due
+    // Next 2 chars: entity/product id
+    // Rest: amount
+    const prefix = transactionType === 'sell' ? '*' : '#';
+    const paymentChar = paymentType === 'cash' ? '1' : '0';
+    const transactionData = `${prefix}${paymentChar}${entityId}${amount}`;
+    
+    const success = await sendTransactionToAPI(transactionData);
+    
+    if (success) {
+      setAmount('');
+      setEntityId('00');
+    }
+    setIsSendingTransaction(false);
   };
 
   const handleQuickOrder = (product: string, quantity: number, supplier: string) => {
@@ -770,6 +873,253 @@ const ShopkeeperDashboard = () => {
                 </GlassCard>
               </motion.div>
             </div>
+
+            {/* Send Transaction Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <GlassCard className="p-6">
+                <h3 className="text-lg font-bold text-foreground mb-4">Send Transaction from Website</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Transaction Type */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Transaction Type</label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={transactionType === 'sell' ? 'default' : 'outline'}
+                        onClick={() => setTransactionType('sell')}
+                        className="flex-1"
+                      >
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Sell
+                      </Button>
+                      <Button
+                        variant={transactionType === 'buy' ? 'default' : 'outline'}
+                        onClick={() => setTransactionType('buy')}
+                        className="flex-1"
+                      >
+                        <TrendingDown className="h-4 w-4 mr-2" />
+                        Buy
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Payment Type */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Payment</label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={paymentType === 'cash' ? 'default' : 'outline'}
+                        onClick={() => setPaymentType('cash')}
+                        className="flex-1"
+                      >
+                        <Banknote className="h-4 w-4 mr-2" />
+                        Cash
+                      </Button>
+                      <Button
+                        variant={paymentType === 'due' ? 'default' : 'outline'}
+                        onClick={() => setPaymentType('due')}
+                        className="flex-1"
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Due
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Entity ID */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      {transactionType === 'sell' ? 'Customer ID' : 'Product ID'}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="9"
+                        value={entityId}
+                        onChange={(e) => setEntityId(e.target.value.padStart(2, '0').slice(0, 2))}
+                        placeholder="00-09"
+                        className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {transactionType === 'sell' 
+                        ? 'Customer: 00=Rahim, 01=Karim, ...' 
+                        : 'Product: 01=Medribo, 02=Pran, ...'}
+                    </p>
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Amount (৳)</label>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="300"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    />
+                  </div>
+
+                  {/* Send Button */}
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleSendTransaction}
+                      disabled={isSendingTransaction || !amount}
+                      className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                    >
+                      {isSendingTransaction ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Activity className="h-4 w-4 mr-2" />
+                          Send Now
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Format Guide */}
+                <div className="space-y-4">
+                  {/* Format Explanation */}
+                  <div className="p-4 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-lg border border-blue-500/20">
+                    <p className="font-semibold text-sm text-foreground mb-2">📋 Data Format Guide</p>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono bg-background px-2 py-1 rounded text-primary font-bold">{transactionType === 'sell' ? '#' : '*'}</span>
+                        <span className="text-muted-foreground">Type: {transactionType === 'sell' ? '#=Sell' : '*=Buy'}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono bg-background px-2 py-1 rounded text-primary font-bold">{paymentType === 'cash' ? '1' : '0'}</span>
+                        <span className="text-muted-foreground">Payment: {paymentType === 'cash' ? '1=Cash' : '0=Due'}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono bg-background px-2 py-1 rounded text-primary font-bold">{entityId}</span>
+                        <span className="text-muted-foreground">{transactionType === 'sell' ? 'Customer ID' : 'Product ID'}: {entityId}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono bg-background px-2 py-1 rounded text-primary font-bold">{amount || '___'}</span>
+                        <span className="text-muted-foreground">Amount: {amount ? amount + ' Taka' : 'Enter amount'}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-2 bg-background rounded border border-border">
+                      <p className="font-mono text-sm font-bold text-primary">
+                        Final: {transactionType === 'sell' ? '#' : '*'}{paymentType === 'cash' ? '1' : '0'}{entityId}{amount || '___'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Reference Tables */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Customers for Sells */}
+                    {transactionType === 'sell' && (
+                      <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                        <p className="font-semibold text-xs mb-2 text-foreground">👥 Customers (Sell)</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          {[
+                            { id: '00', name: 'Rahim' },
+                            { id: '01', name: 'Karim' },
+                            { id: '02', name: 'Asif' },
+                            { id: '03', name: 'Jamal' },
+                            { id: '04', name: 'Nasir' },
+                            { id: '05', name: 'Faruk' },
+                            { id: '06', name: 'Salim' },
+                            { id: '07', name: 'Rahat' },
+                            { id: '08', name: 'Sakib' },
+                            { id: '09', name: 'Tamim' },
+                          ].map((cust) => (
+                            <button
+                              key={cust.id}
+                              onClick={() => setEntityId(cust.id)}
+                              className={`p-2 rounded text-xs transition-colors ${
+                                entityId === cust.id
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-background border border-border hover:bg-muted'
+                              }`}
+                            >
+                              {cust.id}: {cust.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Products for Buys */}
+                    {transactionType === 'buy' && (
+                      <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                        <p className="font-semibold text-xs mb-2 text-foreground">📦 Products (Buy)</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          {[
+                            { id: '01', name: 'Medribo' },
+                            { id: '02', name: 'Pran' },
+                            { id: '03', name: 'Merico' },
+                            { id: '04', name: 'Prans' },
+                            { id: '05', name: 'Product5' },
+                            { id: '06', name: 'Product6' },
+                            { id: '07', name: 'Product7' },
+                            { id: '08', name: 'Product8' },
+                            { id: '09', name: 'Product9' },
+                            { id: '10', name: 'Product10' },
+                          ].map((prod) => (
+                            <button
+                              key={prod.id}
+                              onClick={() => setEntityId(prod.id)}
+                              className={`p-2 rounded text-xs transition-colors ${
+                                entityId === prod.id
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-background border border-border hover:bg-muted'
+                              }`}
+                            >
+                              {prod.id}: {prod.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Amount Examples */}
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                      <p className="font-semibold text-xs mb-2 text-foreground">⚡ Quick Amounts</p>
+                      <div className="grid grid-cols-3 gap-1 text-xs">
+                        {['100', '300', '500', '1000', '2000', '5000'].map((amt) => (
+                          <button
+                            key={amt}
+                            onClick={() => setAmount(amt)}
+                            className={`p-2 rounded transition-colors ${
+                              amount === amt
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background border border-border hover:bg-muted'
+                            }`}
+                          >
+                            ৳{amt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Example Transactions */}
+                  <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <p className="font-semibold text-xs mb-2 text-foreground">✓ Example Transactions</p>
+                    <div className="space-y-1 text-xs text-muted-foreground font-mono">
+                      <p><span className="text-primary">#0013000</span> = Sell (due) to Karim (01) for 3000৳</p>
+                      <p><span className="text-primary">*1021500</span> = Buy (cash) Pran (02) for 1500৳</p>
+                      <p><span className="text-primary">#1005000</span> = Sell (cash) to Faruk (05) for 5000৳</p>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
           </TabsContent>
         </Tabs>
       </div>
